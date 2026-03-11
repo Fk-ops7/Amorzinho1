@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>F & M</title>
+
+  <style>
+    :root{
+      --bg:#040404;
+      --gold:#d4af37;
+      --gold-soft:#f4df9a;
+      --gold-dark:#8f6b17;
+      --pink:#ff6fa8;
+      --pink-soft:#ffd1e1;
+      --text:#f8f3e7;
+      --muted:rgba(248,243,231,0.80);
+      --shadow:0 20px 60px rgba(0,0,0,0.58);
+    }
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    html, body{
+      width:100%;
+      height:100%;
+    }
+
+    body{
+      overflow-y:auto;
+      overflow-x:hidden;
+      background:
+        radial-gradient(circle at top, rgba(255,111,168,0.05), transparent 22%),
+        radial-gradient(circle at bottom, rgba(212,175,55,0.07), transparent 28%),
+        linear-gradient(135deg, #080808, #020202 58%, #0a0a0a);
+      color:var(--text);
+      font-family: Georgia, "Times New Roman", serif;
+      position:relative;
+    }
+
+    canvas{
+      position:absolute;
+      inset:0;
+      z-index:1;
+    }
+
+    .vignette{
+      position:absolute;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      background:radial-gradient(circle, transparent 42%, rgba(0,0,0,0.52) 100%);
+    }
+
+    .frame{
+      position:fixed;
+      top:18px;
+      left:18px;
+      right:18px;
+      bottom:18px;
+      border:1px solid rgba(212,175,55,0.12);
+      z-index:2;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity 1.6s ease;
+    }
+
+    .frame.show{
+      opacity:1;
+    }
+
+    .frame::before,
+    .frame::after{
+      content:"";
+      position:absolute;
+      width:68px;
+      height:68px;
+      border-color:rgba(255,111,168,0.24);
+    }
+
+    .frame::before{
+      top:14px;
+      left:14px;
+      border-top:1px solid;
+      border-left:1px solid;
+    }
+
+    .frame::after{
+      right:14px;
+      bottom:14px;
+      border-right:1px solid;
+      border-bottom:1px solid;
+    }
+
+    .container{
+      position:relative;
+      z-index:3;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .hero{
+      width:min(1000px, 94%);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:28px;
+      opacity:0;
+      transform:translateY(22px);
+      transition:opacity 1.6s ease, transform 1.6s ease;
+      pointer-events:none;
+    }
+
+    .hero.show{
+      opacity:1;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .monogram{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:28px;
+      opacity:0;
+      transform:translateY(18px) scale(0.98);
+      transition:opacity 1.8s ease, transform 1.8s ease;
+    }
+
+    .hero.show .monogram{
+      opacity:1;
+      transform:translateY(0) scale(1);
+    }
+
+    .letter{
+      font-size:clamp(3.2rem, 7vw, 6.7rem);
+      font-weight:400;
+      letter-spacing:0.18em;
+      color:var(--text);
+      text-shadow:
+        0 0 12px rgba(212,175,55,0.10),
+        0 0 26px rgba(255,111,168,0.06);
+    }
+
+    .heart-box{
+      width:88px;
+      height:88px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      animation:pulseSoft 2.8s ease-in-out infinite;
+    }
+
+    .heart-box::before{
+      content:"";
+      position:absolute;
+      inset:-12px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(255,111,168,0.12), transparent 70%);
+      filter:blur(10px);
+    }
+
+    .heart{
+      width:100%;
+      height:100%;
+      filter:
+        drop-shadow(0 0 12px rgba(255,111,168,0.35))
+        drop-shadow(0 0 26px rgba(212,175,55,0.20));
+    }
+
+    .subtitle{
+      letter-spacing:0.42em;
+      text-transform:uppercase;
+      font-size:0.8rem;
+      color:rgba(212,175,55,0.72);
+      text-align:center;
+      opacity:0;
+      transform:translateY(10px);
+      transition:opacity 1.8s ease 0.4s, transform 1.8s ease 0.4s;
+    }
+
+    .hero.show .subtitle{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .letter-card{
+      width:min(780px, 95%);
+      min-height:280px;
+      position:relative;
+      opacity:0;
+      transform:translateY(16px);
+      transition:opacity 1.8s ease 0.8s, transform 1.8s ease 0.8s;
+    }
+
+    .hero.show .letter-card{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .envelope{
+      position:relative;
+      width:100%;
+      min-height:280px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)),
+        linear-gradient(135deg, rgba(212,175,55,0.05), rgba(255,111,168,0.03));
+      border:1px solid rgba(212,175,55,0.16);
+      border-radius:28px;
+      overflow:hidden;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      box-shadow:var(--shadow);
+    }
+
+    .envelope::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(120deg, transparent 0%, rgba(255,111,168,0.04) 28%, rgba(212,175,55,0.05) 45%, transparent 70%);
+      transform:translateX(-120%);
+      animation:shine 5.5s linear infinite;
+      animation-delay:2.5s;
+    }
+
+    .seal{
+      position:absolute;
+      top:22px;
+      left:50%;
+      transform:translateX(-50%) scale(0.8);
+      width:62px;
+      height:62px;
+      border-radius:50%;
+      border:1px solid rgba(212,175,55,0.30);
+      background:
+        radial-gradient(circle at 30% 30%, var(--pink-soft), var(--pink) 42%, #7a1f45 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1rem;
+      color:#2b0615;
+      box-shadow:
+        0 0 18px rgba(255,111,168,0.28),
+        0 0 24px rgba(212,175,55,0.18),
+        inset 0 1px 7px rgba(255,255,255,0.22);
+      opacity:0;
+      transition:opacity 1.4s ease 1.2s, transform 1.4s ease 1.2s;
+      z-index:3;
+    }
+
+    .hero.show .seal{
+      opacity:1;
+      transform:translateX(-50%) scale(1);
+    }
+
+    .paper{
+      position:relative;
+      margin:74px auto 0;
+      width:calc(100% - 56px);
+      min-height:176px;
+      border-radius:20px;
+      background:
+        linear-gradient(180deg, rgba(14,14,14,0.94), rgba(8,8,8,0.97));
+      border:1px solid rgba(212,175,55,0.12);
+      padding:34px 34px 30px;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .paper::before{
+      content:"";
+      position:absolute;
+      top:18px;
+      left:28px;
+      right:28px;
+      height:1px;
+      background:linear-gradient(to right, transparent, rgba(255,111,168,0.24), rgba(212,175,55,0.34), transparent);
+    }
+
+    .paper-title{
+      text-align:center;
+      font-size:0.88rem;
+      text-transform:uppercase;
+      letter-spacing:0.34em;
+      color:rgba(212,175,55,0.72);
+      margin-bottom:22px;
+    }
+
+    #message{
+      text-align:center;
+      font-size:clamp(1.08rem, 2.2vw, 1.42rem);
+      line-height:1.95;
+      color:var(--muted);
+      min-height:86px;
+
+      max-width:680px;
+      margin:auto;
+    }
+
+    .cursor{
+      display:inline-block;
+      margin-left:5px;
+      color:var(--pink);
+      animation:blink 0.9s infinite;
+    }
+
+    .footer-note{
+      margin-top:10px;
+      font-size:0.8rem;
+      text-transform:uppercase;
+      letter-spacing:0.35em;
+      color:rgba(255,255,255,0.28);
+      opacity:0;
+      transform:translateY(10px);
+      transition:opacity 1.8s ease 1.2s, transform 1.8s ease 1.2s;
+    }
+
+    .hero.show .footer-note{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    @keyframes blink{
+      0%,50%{opacity:1;}
+      51%,100%{opacity:0;}
+    }
+
+    @keyframes pulseSoft{
+      0%,100%{transform:scale(1);}
+      50%{transform:scale(1.06);}
+    }
+
+    @keyframes shine{
+      from{transform:translateX(-120%);}
+      to{transform:translateX(140%);}
+    }
+
+    @media (max-width:700px){
+      .monogram{
+        gap:16px;
+      }
+
+      .heart-box{
+        width:66px;
+        height:66px;
+      }
+
+      .letter{
+        font-size:clamp(2.7rem, 12vw, 4rem);
+        letter-spacing:0.12em;
+      }
+
+      .paper{
+        width:calc(100% - 26px);
+        padding:28px 18px 24px;
+      }
+
+      .paper-title,
+      .subtitle,
+      .footer-note{
+        letter-spacing:0.22em;
+      }
+
+      .frame{
+        inset:10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="vignette"></div>
+  <div class="frame" id="frame"></div>
+
+  <div class="container">
+    <div class="hero" id="hero">
+      <div class="monogram">
+        <div class="letter">F</div>
+
+        <div class="heart-box">
+          <svg class="heart" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffd1e1"/>
+                <stop offset="45%" stop-color="#ff6fa8"/>
+                <stop offset="78%" stop-color="#d4af37"/>
+                <stop offset="100%" stop-color="#8f6b17"/>
+              </linearGradient>
+            </defs>
+            <path
+              d="M50 86
+                 C48 84, 15 62, 15 35
+                 C15 22, 24 13, 36 13
+                 C44 13, 50 18, 50 25
+                 C50 18, 56 13, 64 13
+                 C76 13, 85 22, 85 35
+                 C85 62, 52 84, 50 86Z"
+              fill="url(#heartGradient)"
+            />
+          </svg>
+        </div>
+
+        <div class="letter">M</div>
+      </div>
+
+      <div class="subtitle">uma carta para nós</div>
+
+      <div class="letter-card">
+        <div class="envelope">
+          <div class="seal">F•M</div>
+
+          <div class="paper">
+            <div class="paper-title">carta romântica</div>
+            <div id="message"></div><span class="cursor">|</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">Te amo meu amor</div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const hero = document.getElementById("hero");
+    const frame = document.getElementById("frame");
+    const messageEl = document.getElementById("message");
+
+    let w = 0;
+    let h = 0;
+
+    let introParticles = [];
+    let ambientParticles = [];
+    let heartTargets = [];
+
+    let animationStart = 0;
+
+    const introText = "I love you";
+    const introDuration = 7600;
+    const pulseStart = 5200;
+    const pulseEnd = 6900;
+    const revealTime = 7800;
+
+    function resizeCanvas() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      buildHeartTargets();
+      buildIntroParticles();
+      buildAmbientParticles();
+    }
+
+    function buildHeartTargets() {
+      heartTargets = [];
+
+      const scale = Math.min(w, h) * 0.0145;
+      const centerX = w / 2;
+      const centerY = h / 2 - 20;
+
+      /* menos pontos para ficar mais limpo e com mais espaço */
+      for (let t = 0; t < Math.PI * 2; t += 0.16) {
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+
+        heartTargets.push({
+          x: centerX + x * scale,
+          y: centerY + y * scale
+        });
+      }
+    }
+
+    function buildIntroParticles() {
+      introParticles = heartTargets.map((target, index) => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        baseX: target.x,
+        baseY: target.y,
+        color: index % 5 === 0 ? "#ff8fbc" : (index % 2 === 0 ? "#f4df9a" : "#d4af37"),
+        fontSize: Math.max(12, Math.min(18, w * 0.012)),
+        alpha: 0
+      }));
+    }
+
+    function buildAmbientParticles() {
+      ambientParticles = [];
+      const total = Math.min(140, Math.floor((w * h) / 12000));
+
+      for (let i = 0; i < total; i++) {
+        ambientParticles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.8 + 0.4,
+          color: Math.random() > 0.55 ? "#d4af37" : "#ff6fa8",
+          alpha: Math.random() * 0.28 + 0.05,
+          vy: Math.random() * 0.22 + 0.04,
+          vx: (Math.random() - 0.5) * 0.12
+        });
+      }
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function hexToRgba(hex, alpha) {
+      const h = hex.replace("#", "");
+      const bigint = parseInt(h, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getPulseScale(elapsed) {
+      if (elapsed < pulseStart || elapsed > pulseEnd) return 1;
+
+      const p = (elapsed - pulseStart) / (pulseEnd - pulseStart);
+      return 1 + Math.sin(p * Math.PI * 4) * 0.06;
+    }
+
+    function drawIntro(elapsed) {
+      const progress = clamp(elapsed / introDuration, 0, 1);
+      const moveProgress = clamp(progress / 0.78, 0, 1);
+      const easedMove = easeOutCubic(moveProgress);
+
+      let fadeOut = 1;
+      if (progress > 0.90) {
+        fadeOut = 1 - ((progress - 0.90) / 0.10);
+      }
+
+      const pulseScale = getPulseScale(elapsed);
+      const centerX = w / 2;
+      const centerY = h / 2 - 20;
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      introParticles.forEach((p) => {
+        const targetX = p.baseX;
+        const targetY = p.baseY;
+
+        p.x += (targetX - p.x) * (0.015 + easedMove * 0.025);
+        p.y += (targetY - p.y) * (0.015 + easedMove * 0.025);
+
+        const finalX = centerX + (p.x - centerX) * pulseScale;
+        const finalY = centerY + (p.y - centerY) * pulseScale;
+
+        const alpha = Math.min(1, progress * 2.2) * fadeOut;
+        const fontSize = p.fontSize;
+
+        ctx.font = `${fontSize}px Georgia`;
+        ctx.fillStyle = hexToRgba(p.color, alpha);
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = p.color;
+        ctx.fillText(introText, finalX, finalY);
+      });
+
+      ctx.shadowBlur = 0;
+    }
+
+    function drawAmbient() {
+      ambientParticles.forEach((p) => {
+        p.y -= p.vy;
+        p.x += p.vx;
+
+        if (p.y < -10) {
+          p.y = h + 10;
+          p.x = Math.random() * w;
+        }
+
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(p.color, p.alpha);
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = p.color;
+        ctx.fill();
+      });
+
+      ctx.shadowBlur = 0;
+    }
+
+    function animate(now) {
+      const elapsed = now - animationStart;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (elapsed < introDuration) {
+        drawIntro(elapsed);
+      } else {
+        drawAmbient();
+      }
+
+      if (elapsed >= revealTime) {
+        hero.classList.add("show");
+        frame.classList.add("show");
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function startAnimation() {
+      resizeCanvas();
+      animationStart = performance.now();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    startAnimation();
+
+    const finalMessage =
+      "Às vezes eu paro e penso em como, no meio de bilhões de pessoas no mundo, o destino resolveu cruzar justamente o meu caminho com o teu. E quanto mais eu penso nisso, mais percebo que não foi coincidência… foi um daqueles encontros raros que a vida guarda como presente. Você chegou de um jeito que eu nem sei explicar direito. De repente, o meu dia já não era mais só um dia comum, porque tinha uma mensagem tua, uma risada tua, um pedacinho de você nele. E sem perceber, você foi ocupando espaços dentro de mim que eu nem sabia que estavam vazios. Tem algo em você que me acalma e ao mesmo tempo me bagunça inteira. Algo no teu jeito, no teu sorriso, na forma como você fala comigo… que faz o mundo parecer um lugar mais bonito. Eu gosto de pensar no futuro e imaginar que, em algum momento, as distâncias viram só detalhe. Que os abraços deixam de ser imaginados e passam a ser rotina. Que eu posso simplesmente encostar em você, sentir teu cheiro, e lembrar que encontrei exatamente onde eu queria estar. Se tem uma coisa que eu sei com certeza, é que você não é só alguém que passou pela minha vida. Você é alguém que ficou. Que marcou. Que fez meu coração aprender um novo jeito de bater. E, se depender de mim, ainda temos muitas histórias para viver, muitos sorrisos para dividir e muitos momentos para transformar em memória. Porque amar você… é uma das coisas mais bonitas que já me aconteceram";
+
+    let textIndex = 0;
+
+    function typeWriter() {
+  if (!hero.classList.contains("show")) {
+    setTimeout(typeWriter, 120);
+    return;
+  }
+
+  if (textIndex < finalMessage.length) {
+    messageEl.innerHTML += finalMessage.charAt(textIndex);
+    textIndex++;
+
+    // FAZ A PÁGINA DESCER AUTOMATICAMENTE
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: "smooth"
+    });
+
+    setTimeout(typeWriter, 58);
+  }
+}
+
+    setTimeout(typeWriter, 9000);
+  </script>
+</body>
+</html>
